@@ -6,11 +6,16 @@ const shortid = require("shortid");
 const app = express();
 app.use(bodyParser.json());
 
-mongoose.connect("mongodb+srv://root:root@test.dwpgx.gcp.mongodb.net/<react_shopping>?retryWrites=true&w=majority", {
+mongoose.connect("mongodb://localhost/react-shopping-cart", {
     useNewUrlParser: true,
     useCreateIndex: true,
     useUnifiedTopology: true,
-});
+}).then(function (result) {
+    console.log("connection successfully!")
+}).catch(function (err) {
+    console.log(str(err))
+    throw err
+})
 
 const Product = mongoose.model("products", new mongoose.Schema({
     _id: { type: String, default: shortid.generate },
@@ -22,8 +27,8 @@ const Product = mongoose.model("products", new mongoose.Schema({
 }))
 
 app.get("/api/products", async (req, res) => {
-    console.log(Product.find({}))
-    const products = Product.find({});
+    console.log(await Product.find({}))
+    const products = await Product.find({});
     res.send(products);
 });
 
@@ -38,6 +43,43 @@ app.delete("/api/products/:id", async (req, res) => {
     res.send(deletedProduct);
 })
 
+const Order = mongoose.model("orders", new mongoose.Schema({
+    _id: {
+        type: String,
+        default: shortid.generate,
+    },
+    email: String,
+    name: String,
+    address: String,
+    total: Number,
+    cartItems: [{
+        _id: String,
+        title: String,
+        price: Number,
+        count: Number,
+    }]
+}, {
+    timestamps: true,
+
+}));
+
+app.post("/api/orders", async (req, res) => {
+    try {
+        if (!req.body.name ||
+            !req.body.email ||
+            !req.body.address ||
+            !req.body.cartItems ||
+            !req.body.total
+        ) {
+            return res.send({ message: "Data is required." });
+        }
+        const order = await Order(req.body).save();
+        res.send(order);
+    } catch (error) {
+        console.log(String(error))
+    }
+
+});
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
